@@ -42,7 +42,7 @@ private:
     ros::Subscriber subLaserOdometry;
     ros::Subscriber subOdomAftMapped;
   
-
+    // 激光里程计
     nav_msgs::Odometry laserOdometry2;
     tf::StampedTransform laserOdometryTrans2;
     tf::TransformBroadcaster tfBroadcaster2;
@@ -184,6 +184,7 @@ public:
 
         double roll, pitch, yaw;
         geometry_msgs::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
+        // 逆时针旋转？
         tf::Matrix3x3(tf::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
 
         transformSum[0] = -pitch;
