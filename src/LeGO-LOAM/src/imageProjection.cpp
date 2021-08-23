@@ -44,36 +44,37 @@ private:
     ros::Publisher pubSegmentedCloudInfo;
     ros::Publisher pubOutlierCloud;
 
-    pcl::PointCloud<PointType>::Ptr laserCloudIn;
+    pcl::PointCloud<PointType>::Ptr m_laserCloudIn;
 
-    pcl::PointCloud<PointType>::Ptr fullCloud;
-    pcl::PointCloud<PointType>::Ptr fullInfoCloud;
+    pcl::PointCloud<PointType>::Ptr m_fullCloud;
+    pcl::PointCloud<PointType>::Ptr m_fullInfoCloud;
 
-    pcl::PointCloud<PointType>::Ptr groundCloud;
-    pcl::PointCloud<PointType>::Ptr segmentedCloud;
-    pcl::PointCloud<PointType>::Ptr segmentedCloudPure;
-    pcl::PointCloud<PointType>::Ptr outlierCloud;
+    pcl::PointCloud<PointType>::Ptr m_groundCloud;
+    pcl::PointCloud<PointType>::Ptr m_segmentedCloud;
+    pcl::PointCloud<PointType>::Ptr m_segmentedCloudPure;
+    pcl::PointCloud<PointType>::Ptr m_outlierCloud;
 
     PointType nanPoint;
 
-    cv::Mat rangeMat;
-    cv::Mat labelMat;
-    cv::Mat groundMat;
+    cv::Mat m_rangeMat;
+    cv::Mat m_labelMat;
+    cv::Mat m_groundMat;
     int labelCount;
 
     float startOrientation;
     float endOrientation;
 
-    cloud_msgs::cloud_info segMsg;
-    std_msgs::Header cloudHeader;
+
+    cloud_msgs::cloud_info m_segMsg;
+    std_msgs::Header m_cloudHeader;
 
     std::vector<std::pair<uint8_t, uint8_t>> neighborIterator;
 
-    uint16_t *allPushedIndX;
-    uint16_t *allPushedIndY;
+    uint16_t *m_allPushedIndX;
+    uint16_t *m_allPushedIndY;
 
-    uint16_t *queueIndX;
-    uint16_t *queueIndY;
+    uint16_t *m_queueIndX;
+    uint16_t *m_queueIndY;
 
 public:
     ImageProjection() : nh("~")
@@ -103,25 +104,25 @@ public:
     void allocateMemory()
     {
 
-        laserCloudIn.reset(new pcl::PointCloud<PointType>());
+        m_laserCloudIn.reset(new pcl::PointCloud<PointType>());
 
-        fullCloud.reset(new pcl::PointCloud<PointType>());
-        fullInfoCloud.reset(new pcl::PointCloud<PointType>());
+        m_fullCloud.reset(new pcl::PointCloud<PointType>());
+        m_fullInfoCloud.reset(new pcl::PointCloud<PointType>());
 
-        groundCloud.reset(new pcl::PointCloud<PointType>());
-        segmentedCloud.reset(new pcl::PointCloud<PointType>());
-        segmentedCloudPure.reset(new pcl::PointCloud<PointType>());
-        outlierCloud.reset(new pcl::PointCloud<PointType>());
+        m_groundCloud.reset(new pcl::PointCloud<PointType>());
+        m_segmentedCloud.reset(new pcl::PointCloud<PointType>());
+        m_segmentedCloudPure.reset(new pcl::PointCloud<PointType>());
+        m_outlierCloud.reset(new pcl::PointCloud<PointType>());
 
-        fullCloud->points.resize(N_SCAN * Horizon_SCAN);
-        fullInfoCloud->points.resize(N_SCAN * Horizon_SCAN);
+        m_fullCloud->points.resize(N_SCAN * Horizon_SCAN);
+        m_fullInfoCloud->points.resize(N_SCAN * Horizon_SCAN);
 
-        segMsg.startRingIndex.assign(N_SCAN, 0);
-        segMsg.endRingIndex.assign(N_SCAN, 0);
+        m_segMsg.startRingIndex.assign(N_SCAN, 0);
+        m_segMsg.endRingIndex.assign(N_SCAN, 0);
 
-        segMsg.segmentedCloudGroundFlag.assign(N_SCAN * Horizon_SCAN, false);
-        segMsg.segmentedCloudColInd.assign(N_SCAN * Horizon_SCAN, 0);
-        segMsg.segmentedCloudRange.assign(N_SCAN * Horizon_SCAN, 0);
+        m_segMsg.segmentedCloudGroundFlag.assign(N_SCAN * Horizon_SCAN, false);
+        m_segMsg.segmentedCloudColInd.assign(N_SCAN * Horizon_SCAN, 0);
+        m_segMsg.segmentedCloudRange.assign(N_SCAN * Horizon_SCAN, 0);
 
         // labelComponents函数中用到了这个矩阵
         // 该矩阵用于求某个点的上下左右4个邻接点
@@ -139,29 +140,29 @@ public:
         neighbor.second = 0;
         neighborIterator.push_back(neighbor);
 
-        allPushedIndX = new uint16_t[N_SCAN * Horizon_SCAN];
-        allPushedIndY = new uint16_t[N_SCAN * Horizon_SCAN];
+        m_allPushedIndX = new uint16_t[N_SCAN * Horizon_SCAN];
+        m_allPushedIndY = new uint16_t[N_SCAN * Horizon_SCAN];
 
-        queueIndX = new uint16_t[N_SCAN * Horizon_SCAN];
-        queueIndY = new uint16_t[N_SCAN * Horizon_SCAN];
+        m_queueIndX = new uint16_t[N_SCAN * Horizon_SCAN];
+        m_queueIndY = new uint16_t[N_SCAN * Horizon_SCAN];
     }
 
     // 初始化/重置各类参数内容
     void resetParameters()
     {
-        laserCloudIn->clear();
-        groundCloud->clear();
-        segmentedCloud->clear();
-        segmentedCloudPure->clear();
-        outlierCloud->clear();
+        m_laserCloudIn->clear();
+        m_groundCloud->clear();
+        m_segmentedCloud->clear();
+        m_segmentedCloudPure->clear();
+        m_outlierCloud->clear();
 
-        rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
-        groundMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_8S, cv::Scalar::all(0));
-        labelMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32S, cv::Scalar::all(0));
+        m_rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
+        m_groundMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_8S, cv::Scalar::all(0));
+        m_labelMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32S, cv::Scalar::all(0));
         labelCount = 1;
 
-        std::fill(fullCloud->points.begin(), fullCloud->points.end(), nanPoint);
-        std::fill(fullInfoCloud->points.begin(), fullInfoCloud->points.end(), nanPoint);
+        std::fill(m_fullCloud->points.begin(), m_fullCloud->points.end(), nanPoint);
+        std::fill(m_fullInfoCloud->points.begin(), m_fullInfoCloud->points.end(), nanPoint);
     }
 
     ~ImageProjection() {}
@@ -169,8 +170,8 @@ public:
     void copyPointCloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     {
         // 将ROS中的sensor_msgs::PointCloud2ConstPtr类型转换到pcl点云库指针
-        cloudHeader = laserCloudMsg->header;
-        pcl::fromROSMsg(*laserCloudMsg, *laserCloudIn);
+        m_cloudHeader = laserCloudMsg->header;
+        pcl::fromROSMsg(*laserCloudMsg, *m_laserCloudIn);
     }
 
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
@@ -191,28 +192,28 @@ public:
         // 雷达内部旋转扫描方向：Z轴俯视下来，顺时针方向（Z轴右手定则反向）
 
         // atan2(y,x)函数的返回值范围(-PI,PI],表示与复数x+yi的幅角
-        // segMsg.startOrientation范围为(-PI,PI]
-        // segMsg.endOrientation范围为(PI,3PI]
+        // m_segMsg.startOrientation范围为(-PI,PI]
+        // m_segMsg.endOrientation范围为(PI,3PI]
         // 因为内部雷达旋转方向原因，所以atan2(..)函数前面需要加一个负号
-        segMsg.startOrientation = -atan2(laserCloudIn->points[0].y, laserCloudIn->points[0].x);
-        // 下面这句话怀疑作者可能写错了，laserCloudIn->points.size() - 2应该是laserCloudIn->points.size() - 1
-        segMsg.endOrientation = -atan2(laserCloudIn->points[laserCloudIn->points.size() - 1].y,
-                                       laserCloudIn->points[laserCloudIn->points.size() - 2].x) +
+        m_segMsg.startOrientation = -atan2(m_laserCloudIn->points[0].y, m_laserCloudIn->points[0].x);
+        // 下面这句话怀疑作者可能写错了，m_laserCloudIn->points.size() - 2应该是m_laserCloudIn->points.size() - 1
+        m_segMsg.endOrientation = -atan2(m_laserCloudIn->points[m_laserCloudIn->points.size() - 1].y,
+                                       m_laserCloudIn->points[m_laserCloudIn->points.size() - 2].x) +
                                 2 * M_PI;
         // 开始和结束的角度差一般是多少？
         // 一个velodyne 雷达数据包转过的角度多大？
         // 雷达一般包含的是一圈的数据，所以角度差一般是2*PI，一个数据包转过360度
 
-        // segMsg.endOrientation - segMsg.startOrientation范围为(0,4PI)
+        // m_segMsg.endOrientation - m_segMsg.startOrientation范围为(0,4PI)
         // 如果角度差大于3Pi或小于Pi，说明角度差有问题，进行调整。
-        if (segMsg.endOrientation - segMsg.startOrientation > 3 * M_PI)
+        if (m_segMsg.endOrientation - m_segMsg.startOrientation > 3 * M_PI)
         {
-            segMsg.endOrientation -= 2 * M_PI;
+            m_segMsg.endOrientation -= 2 * M_PI;
         }
-        else if (segMsg.endOrientation - segMsg.startOrientation < M_PI)
-            segMsg.endOrientation += 2 * M_PI;
-        // segMsg.orientationDiff的范围为(PI,3PI),一圈大小为2PI，应该在2PI左右
-        segMsg.orientationDiff = segMsg.endOrientation - segMsg.startOrientation;
+        else if (m_segMsg.endOrientation - m_segMsg.startOrientation < M_PI)
+            m_segMsg.endOrientation += 2 * M_PI;
+        // m_segMsg.orientationDiff的范围为(PI,3PI),一圈大小为2PI，应该在2PI左右
+        m_segMsg.orientationDiff = m_segMsg.endOrientation - m_segMsg.startOrientation;
     }
 
     void projectPointCloud()
@@ -221,14 +222,14 @@ public:
         size_t rowIdn, columnIdn, index, cloudSize;
         PointType thisPoint;
 
-        cloudSize = laserCloudIn->points.size();
+        cloudSize = m_laserCloudIn->points.size();
 
         for (size_t i = 0; i < cloudSize; ++i)
         {
 
-            thisPoint.x = laserCloudIn->points[i].x;
-            thisPoint.y = laserCloudIn->points[i].y;
-            thisPoint.z = laserCloudIn->points[i].z;
+            thisPoint.x = m_laserCloudIn->points[i].x;
+            thisPoint.y = m_laserCloudIn->points[i].y;
+            thisPoint.z = m_laserCloudIn->points[i].z;
 
             // 计算竖直方向上的角度（雷达的第几线）
             verticalAngle = atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) * 180 / M_PI;
@@ -276,15 +277,15 @@ public:
                 continue;
 
             range = sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y + thisPoint.z * thisPoint.z);
-            rangeMat.at<float>(rowIdn, columnIdn) = range;
+            m_rangeMat.at<float>(rowIdn, columnIdn) = range;
 
             // columnIdn:[0,H] (H:Horizon_SCAN)==>[0,1800]
             thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
 
             index = columnIdn + rowIdn * Horizon_SCAN;
-            fullCloud->points[index] = thisPoint;
+            m_fullCloud->points[index] = thisPoint;
 
-            fullInfoCloud->points[index].intensity = range;
+            m_fullInfoCloud->points[index].intensity = range;
         }
     }
 
@@ -304,53 +305,53 @@ public:
 
                 // 初始化的时候用nanPoint.intensity = -1 填充
                 // 都是-1 证明是空点nanPoint
-                if (fullCloud->points[lowerInd].intensity == -1 ||
-                    fullCloud->points[upperInd].intensity == -1)
+                if (m_fullCloud->points[lowerInd].intensity == -1 ||
+                    m_fullCloud->points[upperInd].intensity == -1)
                 {
-                    groundMat.at<int8_t>(i, j) = -1;
+                    m_groundMat.at<int8_t>(i, j) = -1;
                     continue;
                 }
 
                 // 由上下两线之间点的XYZ位置得到两线之间的俯仰角
-                // 如果俯仰角在10度以内，则判定(i,j)为地面点,groundMat[i][j]=1
+                // 如果俯仰角在10度以内，则判定(i,j)为地面点,m_groundMat[i][j]=1
                 // 否则，则不是地面点，进行后续操作
-                diffX = fullCloud->points[upperInd].x - fullCloud->points[lowerInd].x;
-                diffY = fullCloud->points[upperInd].y - fullCloud->points[lowerInd].y;
-                diffZ = fullCloud->points[upperInd].z - fullCloud->points[lowerInd].z;
+                diffX = m_fullCloud->points[upperInd].x - m_fullCloud->points[lowerInd].x;
+                diffY = m_fullCloud->points[upperInd].y - m_fullCloud->points[lowerInd].y;
+                diffZ = m_fullCloud->points[upperInd].z - m_fullCloud->points[lowerInd].z;
 
                 angle = atan2(diffZ, sqrt(diffX * diffX + diffY * diffY)) * 180 / M_PI;
 
                 if (abs(angle - sensorMountAngle) <= 10)
                 {
-                    groundMat.at<int8_t>(i, j) = 1;
-                    groundMat.at<int8_t>(i + 1, j) = 1;
+                    m_groundMat.at<int8_t>(i, j) = 1;
+                    m_groundMat.at<int8_t>(i + 1, j) = 1;
                 }
             }
         }
 
-        // 找到所有点中的地面点或者距离为FLT_MAX(rangeMat的初始值)的点，并将他们标记为-1
-        // rangeMat[i][j]==FLT_MAX，代表的含义是什么？ 无效点
+        // 找到所有点中的地面点或者距离为FLT_MAX(m_rangeMat的初始值)的点，并将他们标记为-1
+        // m_rangeMat[i][j]==FLT_MAX，代表的含义是什么？ 无效点
         for (size_t i = 0; i < N_SCAN; ++i)
         {
             for (size_t j = 0; j < Horizon_SCAN; ++j)
             {
-                if (groundMat.at<int8_t>(i, j) == 1 || rangeMat.at<float>(i, j) == FLT_MAX)
+                if (m_groundMat.at<int8_t>(i, j) == 1 || m_rangeMat.at<float>(i, j) == FLT_MAX)
                 {
-                    labelMat.at<int>(i, j) = -1;
+                    m_labelMat.at<int>(i, j) = -1;
                 }
             }
         }
 
-        // 如果有节点订阅groundCloud，那么就需要把地面点发布出来
-        // 具体实现过程：把点放到groundCloud队列中去
+        // 如果有节点订阅m_groundCloud，那么就需要把地面点发布出来
+        // 具体实现过程：把点放到m_groundCloud队列中去
         if (pubGroundCloud.getNumSubscribers() != 0)
         {
             for (size_t i = 0; i <= groundScanInd; ++i)
             {
                 for (size_t j = 0; j < Horizon_SCAN; ++j)
                 {
-                    if (groundMat.at<int8_t>(i, j) == 1)
-                        groundCloud->push_back(fullCloud->points[j + i * Horizon_SCAN]);
+                    if (m_groundMat.at<int8_t>(i, j) == 1)
+                        m_groundCloud->push_back(m_fullCloud->points[j + i * Horizon_SCAN]);
                 }
             }
         }
@@ -360,35 +361,35 @@ public:
     {
         for (size_t i = 0; i < N_SCAN; ++i)
             for (size_t j = 0; j < Horizon_SCAN; ++j)
-                // 如果labelMat[i][j]=0,表示没有对该点进行过分类
+                // 如果m_labelMat[i][j]=0,表示没有对该点进行过分类
                 // 需要对该点进行聚类
-                if (labelMat.at<int>(i, j) == 0)
+                if (m_labelMat.at<int>(i, j) == 0)
                     labelComponents(i, j);
 
         int sizeOfSegCloud = 0;
         for (size_t i = 0; i < N_SCAN; ++i)
         {
 
-            // segMsg.startRingIndex[i]
-            // segMsg.endRingIndex[i]
+            // m_segMsg.startRingIndex[i]
+            // m_segMsg.endRingIndex[i]
             // 表示第i线的点云起始序列和终止序列
             // 以开始线后的第6线为开始，以结束线前的第6线为结束
-            segMsg.startRingIndex[i] = sizeOfSegCloud - 1 + 5;
+            m_segMsg.startRingIndex[i] = sizeOfSegCloud - 1 + 5;
 
             for (size_t j = 0; j < Horizon_SCAN; ++j)
             {
-                // 找到可用的特征点或者地面点(不选择labelMat[i][j]=0的点)
-                if (labelMat.at<int>(i, j) > 0 || groundMat.at<int8_t>(i, j) == 1)
+                // 找到可用的特征点或者地面点(不选择m_labelMat[i][j]=0的点)
+                if (m_labelMat.at<int>(i, j) > 0 || m_groundMat.at<int8_t>(i, j) == 1)
                 {
-                    // labelMat数值为999999表示这个点是因为聚类数量不够30而被舍弃的点
+                    // m_labelMat数值为999999表示这个点是因为聚类数量不够30而被舍弃的点
                     // 需要舍弃的点直接continue跳过本次循环，
                     // 当列数为5的倍数，并且行数较大，可以认为非地面点的，将它保存进异常点云(界外点云)中
                     // 然后再跳过本次循环
-                    if (labelMat.at<int>(i, j) == 999999)
+                    if (m_labelMat.at<int>(i, j) == 999999)
                     {
                         if (i > groundScanInd && j % 5 == 0)
                         {
-                            outlierCloud->push_back(fullCloud->points[j + i * Horizon_SCAN]);
+                            m_outlierCloud->push_back(m_fullCloud->points[j + i * Horizon_SCAN]);
                             continue;
                         }
                         else
@@ -398,23 +399,23 @@ public:
                     }
 
                     // 如果是地面点,对于列数不为5的倍数的，直接跳过不处理
-                    if (groundMat.at<int8_t>(i, j) == 1)
+                    if (m_groundMat.at<int8_t>(i, j) == 1)
                     {
                         if (j % 5 != 0 && j > 5 && j < Horizon_SCAN - 5)
                             continue;
                     }
                     // 上面多个if语句已经去掉了不符合条件的点，这部分直接进行信息的拷贝和保存操作
                     // 保存完毕后sizeOfSegCloud递增
-                    segMsg.segmentedCloudGroundFlag[sizeOfSegCloud] = (groundMat.at<int8_t>(i, j) == 1);
-                    segMsg.segmentedCloudColInd[sizeOfSegCloud] = j;
-                    segMsg.segmentedCloudRange[sizeOfSegCloud] = rangeMat.at<float>(i, j);
-                    segmentedCloud->push_back(fullCloud->points[j + i * Horizon_SCAN]);
+                    m_segMsg.segmentedCloudGroundFlag[sizeOfSegCloud] = (m_groundMat.at<int8_t>(i, j) == 1);
+                    m_segMsg.segmentedCloudColInd[sizeOfSegCloud] = j;
+                    m_segMsg.segmentedCloudRange[sizeOfSegCloud] = m_rangeMat.at<float>(i, j);
+                    m_segmentedCloud->push_back(m_fullCloud->points[j + i * Horizon_SCAN]);
                     ++sizeOfSegCloud;
                 }
             }
 
             // 以结束线前的第5线为结束
-            segMsg.endRingIndex[i] = sizeOfSegCloud - 1 - 5;
+            m_segMsg.endRingIndex[i] = sizeOfSegCloud - 1 - 5;
         }
 
         // 如果有节点订阅SegmentedCloudPure,
@@ -425,11 +426,11 @@ public:
             {
                 for (size_t j = 0; j < Horizon_SCAN; ++j)
                 {
-                    // 需要选择不是地面点(labelMat[i][j]!=-1)和没被舍弃的点
-                    if (labelMat.at<int>(i, j) > 0 && labelMat.at<int>(i, j) != 999999)
+                    // 需要选择不是地面点(m_labelMat[i][j]!=-1)和没被舍弃的点
+                    if (m_labelMat.at<int>(i, j) > 0 && m_labelMat.at<int>(i, j) != 999999)
                     {
-                        segmentedCloudPure->push_back(fullCloud->points[j + i * Horizon_SCAN]);
-                        segmentedCloudPure->points.back().intensity = labelMat.at<int>(i, j);
+                        m_segmentedCloudPure->push_back(m_fullCloud->points[j + i * Horizon_SCAN]);
+                        m_segmentedCloudPure->points.back().intensity = m_labelMat.at<int>(i, j);
                     }
                 }
             }
@@ -442,14 +443,14 @@ public:
         int fromIndX, fromIndY, thisIndX, thisIndY;
         bool lineCountFlag[N_SCAN] = {false};
 
-        queueIndX[0] = row;
-        queueIndY[0] = col;
+        m_queueIndX[0] = row;
+        m_queueIndY[0] = col;
         int queueSize = 1;
         int queueStartInd = 0;
         int queueEndInd = 1;
 
-        allPushedIndX[0] = row;
-        allPushedIndY[0] = col;
+        m_allPushedIndX[0] = row;
+        m_allPushedIndY[0] = col;
         int allPushedIndSize = 1;
 
         // 标准的BFS
@@ -457,12 +458,12 @@ public:
         // 判断(row,col)是否是这个平面中一点
         while (queueSize > 0)
         {
-            fromIndX = queueIndX[queueStartInd];
-            fromIndY = queueIndY[queueStartInd];
+            fromIndX = m_queueIndX[queueStartInd];
+            fromIndY = m_queueIndY[queueStartInd];
             --queueSize;
             ++queueStartInd;
             // labelCount的初始值为1，后面会递增
-            labelMat.at<int>(fromIndX, fromIndY) = labelCount;
+            m_labelMat.at<int>(fromIndX, fromIndY) = labelCount;
 
             // neighbor=[[-1,0];[0,1];[0,-1];[1,0]]
             // 遍历点[fromIndX,fromIndY]边上的四个邻点
@@ -482,16 +483,16 @@ public:
                     thisIndY = 0;
 
                 // 如果点[thisIndX,thisIndY]已经标记过
-                // labelMat中，-1代表无效点，0代表未进行标记过，其余为其他的标记
+                // m_labelMat中，-1代表无效点，0代表未进行标记过，其余为其他的标记
                 // 如果当前的邻点已经标记过，则跳过该点。
-                // 如果labelMat已经标记为正整数，则已经聚类完成，不需要再次对该点聚类
-                if (labelMat.at<int>(thisIndX, thisIndY) != 0)
+                // 如果m_labelMat已经标记为正整数，则已经聚类完成，不需要再次对该点聚类
+                if (m_labelMat.at<int>(thisIndX, thisIndY) != 0)
                     continue;
 
-                d1 = std::max(rangeMat.at<float>(fromIndX, fromIndY),
-                              rangeMat.at<float>(thisIndX, thisIndY));
-                d2 = std::min(rangeMat.at<float>(fromIndX, fromIndY),
-                              rangeMat.at<float>(thisIndX, thisIndY));
+                d1 = std::max(m_rangeMat.at<float>(fromIndX, fromIndY),
+                              m_rangeMat.at<float>(thisIndX, thisIndY));
+                d2 = std::min(m_rangeMat.at<float>(fromIndX, fromIndY),
+                              m_rangeMat.at<float>(thisIndX, thisIndY));
 
                 // alpha代表角度分辨率，
                 // X方向上角度分辨率是segmentAlphaX(rad)
@@ -509,16 +510,16 @@ public:
                 {
                     // segmentTheta=1.0472<==>60度
                     // 如果算出角度大于60度，则假设这是个平面
-                    queueIndX[queueEndInd] = thisIndX;
-                    queueIndY[queueEndInd] = thisIndY;
+                    m_queueIndX[queueEndInd] = thisIndX;
+                    m_queueIndY[queueEndInd] = thisIndY;
                     ++queueSize;
                     ++queueEndInd;
 
-                    labelMat.at<int>(thisIndX, thisIndY) = labelCount;
+                    m_labelMat.at<int>(thisIndX, thisIndY) = labelCount;
                     lineCountFlag[thisIndX] = true;
 
-                    allPushedIndX[allPushedIndSize] = thisIndX;
-                    allPushedIndY[allPushedIndSize] = thisIndY;
+                    m_allPushedIndX[allPushedIndSize] = thisIndX;
+                    m_allPushedIndY[allPushedIndSize] = thisIndY;
                     ++allPushedIndSize;
                 }
             }
@@ -551,7 +552,7 @@ public:
             for (size_t i = 0; i < allPushedIndSize; ++i)
             {
                 // 标记为999999的是需要舍弃的聚类的点，因为他们的数量小于30个
-                labelMat.at<int>(allPushedIndX[i], allPushedIndY[i]) = 999999;
+                m_labelMat.at<int>(m_allPushedIndX[i], m_allPushedIndY[i]) = 999999;
             }
         }
     }
@@ -560,51 +561,51 @@ public:
     void publishCloud()
     {
         // 发布cloud_msgs::cloud_info消息
-        segMsg.header = cloudHeader;
-        pubSegmentedCloudInfo.publish(segMsg);
+        m_segMsg.header = m_cloudHeader;
+        pubSegmentedCloudInfo.publish(m_segMsg);
 
         sensor_msgs::PointCloud2 laserCloudTemp;
 
         // pubOutlierCloud发布界外点云
-        pcl::toROSMsg(*outlierCloud, laserCloudTemp);
-        laserCloudTemp.header.stamp = cloudHeader.stamp;
+        pcl::toROSMsg(*m_outlierCloud, laserCloudTemp);
+        laserCloudTemp.header.stamp = m_cloudHeader.stamp;
         laserCloudTemp.header.frame_id = "base_link";
         pubOutlierCloud.publish(laserCloudTemp);
 
         // pubSegmentedCloud发布分块点云
-        pcl::toROSMsg(*segmentedCloud, laserCloudTemp);
-        laserCloudTemp.header.stamp = cloudHeader.stamp;
+        pcl::toROSMsg(*m_segmentedCloud, laserCloudTemp);
+        laserCloudTemp.header.stamp = m_cloudHeader.stamp;
         laserCloudTemp.header.frame_id = "base_link";
         pubSegmentedCloud.publish(laserCloudTemp);
 
         if (pubFullCloud.getNumSubscribers() != 0)
         {
-            pcl::toROSMsg(*fullCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = cloudHeader.stamp;
+            pcl::toROSMsg(*m_fullCloud, laserCloudTemp);
+            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubFullCloud.publish(laserCloudTemp);
         }
 
         if (pubGroundCloud.getNumSubscribers() != 0)
         {
-            pcl::toROSMsg(*groundCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = cloudHeader.stamp;
+            pcl::toROSMsg(*m_groundCloud, laserCloudTemp);
+            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubGroundCloud.publish(laserCloudTemp);
         }
 
         if (pubSegmentedCloudPure.getNumSubscribers() != 0)
         {
-            pcl::toROSMsg(*segmentedCloudPure, laserCloudTemp);
-            laserCloudTemp.header.stamp = cloudHeader.stamp;
+            pcl::toROSMsg(*m_segmentedCloudPure, laserCloudTemp);
+            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubSegmentedCloudPure.publish(laserCloudTemp);
         }
 
         if (pubFullInfoCloud.getNumSubscribers() != 0)
         {
-            pcl::toROSMsg(*fullInfoCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = cloudHeader.stamp;
+            pcl::toROSMsg(*m_fullInfoCloud, laserCloudTemp);
+            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubFullInfoCloud.publish(laserCloudTemp);
         }
