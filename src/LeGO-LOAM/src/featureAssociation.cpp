@@ -541,6 +541,7 @@ public:
         tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
 
         // 加速度去除重力影响，同时坐标轴进行变换
+        // 相关解释在https://blog.csdn.net/weixin_44492854/article/details/109249662
         float accX = imuIn->linear_acceleration.y - sin(roll) * cos(pitch) * 9.81;
         float accY = imuIn->linear_acceleration.z - cos(roll) * cos(pitch) * 9.81;
         float accZ = imuIn->linear_acceleration.x + sin(pitch) * 9.81;
@@ -607,6 +608,9 @@ public:
         {
             // 这里xyz与laboshin_loam代码中的一样经过坐标轴变换
             // imuhandler() 中相同的坐标变换
+            // y->x
+            // z->y
+            // x->z
             point.x = segmentedCloud->points[i].y;
             point.y = segmentedCloud->points[i].z;
             point.z = segmentedCloud->points[i].x;
