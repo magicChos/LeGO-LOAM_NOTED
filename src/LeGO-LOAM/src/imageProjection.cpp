@@ -64,7 +64,6 @@ private:
     float startOrientation;
     float endOrientation;
 
-
     cloud_msgs::cloud_info m_segMsg;
     std_msgs::Header m_cloudHeader;
 
@@ -198,8 +197,8 @@ public:
         m_segMsg.startOrientation = -atan2(m_laserCloudIn->points[0].y, m_laserCloudIn->points[0].x);
         // 下面这句话怀疑作者可能写错了，m_laserCloudIn->points.size() - 2应该是m_laserCloudIn->points.size() - 1
         m_segMsg.endOrientation = -atan2(m_laserCloudIn->points[m_laserCloudIn->points.size() - 1].y,
-                                       m_laserCloudIn->points[m_laserCloudIn->points.size() - 2].x) +
-                                2 * M_PI;
+                                         m_laserCloudIn->points[m_laserCloudIn->points.size() - 2].x) +
+                                  2 * M_PI;
         // 开始和结束的角度差一般是多少？
         // 一个velodyne 雷达数据包转过的角度多大？
         // 雷达一般包含的是一圈的数据，所以角度差一般是2*PI，一个数据包转过360度
