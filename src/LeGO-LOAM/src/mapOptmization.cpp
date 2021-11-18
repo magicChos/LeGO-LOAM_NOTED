@@ -100,7 +100,7 @@ private:
     // PointType(pcl::PointXYZI)的XYZI分别保存3个方向上的平移和一个索引(cloudKeyPoses3D->points.size())
     pcl::PointCloud<PointType>::Ptr cloudKeyPoses3D;
 
-    //PointTypePose的XYZI保存和cloudKeyPoses3D一样的内容，另外还保存RPY角度以及一个时间值timeLaserOdometry
+    // PointTypePose的XYZI保存和cloudKeyPoses3D一样的内容，另外还保存RPY角度以及一个时间值timeLaserOdometry
     pcl::PointCloud<PointTypePose>::Ptr cloudKeyPoses6D;
 
     // 结尾有DS代表是downsize,进行过下采样
@@ -597,7 +597,7 @@ public:
         // 坐标系变换，旋转rpy角
         for (int i = 0; i < cloudSize; ++i)
         {
-
+            // zxy旋转
             pointFrom = &cloudIn->points[i];
             float x1 = cos(transformIn->yaw) * pointFrom->x - sin(transformIn->yaw) * pointFrom->y;
             float y1 = sin(transformIn->yaw) * pointFrom->x + cos(transformIn->yaw) * pointFrom->y;
@@ -830,8 +830,10 @@ public:
 
         latestFrameIDLoopCloure = cloudKeyPoses3D->points.size() - 1;
         // 点云的xyz坐标进行坐标系变换(分别绕xyz轴旋转)
-        *latestSurfKeyFrameCloud += *transformPointCloud(cornerCloudKeyFrames[latestFrameIDLoopCloure], &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
-        *latestSurfKeyFrameCloud += *transformPointCloud(surfCloudKeyFrames[latestFrameIDLoopCloure], &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
+        *latestSurfKeyFrameCloud += *transformPointCloud(cornerCloudKeyFrames[latestFrameIDLoopCloure],
+                                                         &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
+        *latestSurfKeyFrameCloud += *transformPointCloud(surfCloudKeyFrames[latestFrameIDLoopCloure],
+                                                         &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
 
         // latestSurfKeyFrameCloud中存储的是下面公式计算后的index(intensity):
         // thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
