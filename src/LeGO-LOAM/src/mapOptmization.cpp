@@ -830,8 +830,10 @@ public:
 
         latestFrameIDLoopCloure = cloudKeyPoses3D->points.size() - 1;
         // 点云的xyz坐标进行坐标系变换(分别绕xyz轴旋转)
-        *latestSurfKeyFrameCloud += *transformPointCloud(cornerCloudKeyFrames[latestFrameIDLoopCloure], &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
-        *latestSurfKeyFrameCloud += *transformPointCloud(surfCloudKeyFrames[latestFrameIDLoopCloure], &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
+        *latestSurfKeyFrameCloud += *transformPointCloud(cornerCloudKeyFrames[latestFrameIDLoopCloure],
+            &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
+        *latestSurfKeyFrameCloud += *transformPointCloud(surfCloudKeyFrames[latestFrameIDLoopCloure],
+            &cloudKeyPoses6D->points[latestFrameIDLoopCloure]);
 
         // latestSurfKeyFrameCloud中存储的是下面公式计算后的index(intensity):
         // thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
