@@ -43,10 +43,11 @@ private:
     ros::Publisher pubSegmentedCloudPure;
     ros::Publisher pubSegmentedCloudInfo;
     ros::Publisher pubOutlierCloud;
-
+    // 存储收到的当前帧点云数据
     pcl::PointCloud<PointType>::Ptr m_laserCloudIn;
 
     pcl::PointCloud<PointType>::Ptr m_fullCloud;
+    // ? 
     pcl::PointCloud<PointType>::Ptr m_fullInfoCloud;
 
     pcl::PointCloud<PointType>::Ptr m_groundCloud;
@@ -175,7 +176,6 @@ public:
 
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     {
-
         copyPointCloud(laserCloudMsg);
         findStartEndAngle();
         projectPointCloud();
