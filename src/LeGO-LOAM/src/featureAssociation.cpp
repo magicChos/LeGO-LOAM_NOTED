@@ -50,7 +50,9 @@ private:
     ros::Publisher pubSurfPointsFlat;
     ros::Publisher pubSurfPointsLessFlat;
 
+    // 保存分割的点云
     pcl::PointCloud<PointType>::Ptr segmentedCloud;
+    // 保存外点点云数据
     pcl::PointCloud<PointType>::Ptr outlierCloud;
 
     pcl::PointCloud<PointType>::Ptr cornerPointsSharp;
@@ -71,7 +73,7 @@ private:
     bool newSegmentedCloud;
     bool newSegmentedCloudInfo;
     bool newOutlierCloud;
-
+    // 记录分割点云传过来的信息
     cloud_msgs::cloud_info segInfo;
     std_msgs::Header cloudHeader;
 

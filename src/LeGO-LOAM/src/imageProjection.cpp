@@ -46,8 +46,9 @@ private:
     // 存储收到的当前帧点云数据
     pcl::PointCloud<PointType>::Ptr m_laserCloudIn;
 
+    // 默认填充无效点
     pcl::PointCloud<PointType>::Ptr m_fullCloud;
-    // ? 
+    // 默认填充无效点
     pcl::PointCloud<PointType>::Ptr m_fullInfoCloud;
 
     pcl::PointCloud<PointType>::Ptr m_groundCloud;
@@ -167,6 +168,11 @@ public:
 
     ~ImageProjection() {}
 
+    /**
+     * @brief 将收到的数据转为pcl格式
+     * 
+     * @param laserCloudMsg[in] 收到的ros点云
+     */
     void copyPointCloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     {
         // 将ROS中的sensor_msgs::PointCloud2ConstPtr类型转换到pcl点云库指针
