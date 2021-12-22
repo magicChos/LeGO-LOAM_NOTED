@@ -50,7 +50,7 @@ private:
     ros::Publisher pubSurfPointsFlat;
     ros::Publisher pubSurfPointsLessFlat;
 
-    // 保存分割的点云，其坐标已经变换到起始时刻
+    // 保存分割的点云，其坐标会变换到Imu的start时刻
     pcl::PointCloud<PointType>::Ptr segmentedCloud;
     // 保存外点点云数据
     pcl::PointCloud<PointType>::Ptr outlierCloud;
@@ -66,18 +66,21 @@ private:
     pcl::VoxelGrid<PointType> downSizeFilter;
     // 记录当前激光的时间戳
     double timeScanCur;
+    // 记录新收到分割点云的时间戳
     double timeNewSegmentedCloud;
-    // 记录收到新分割点云的时间错
+    // 记录收到新分割点云信息的时间错
     double timeNewSegmentedCloudInfo;
     // 记录外点时间戳
     double timeNewOutlierCloud;
 
     bool newSegmentedCloud;
+    // 判断是否收到新分割点云信息
     bool newSegmentedCloudInfo;
     // 是否收到新的异常点云
     bool newOutlierCloud;
     // 记录分割点云传过来的信息
     cloud_msgs::cloud_info segInfo;
+    // 收到的当前激光文件头
     std_msgs::Header cloudHeader;
 
     int systemInitCount;
@@ -103,13 +106,14 @@ private:
     float imuShiftXCur, imuShiftYCur, imuShiftZCur;
 
     float imuShiftFromStartXCur, imuShiftFromStartYCur, imuShiftFromStartZCur;
-    // 从起始时刻到当前的imu相对速度，在start坐标系下
+    // 从起始时刻到当前的imu相对速度，在imu start坐标系下
     float imuVeloFromStartXCur, imuVeloFromStartYCur, imuVeloFromStartZCur;
 
     float imuAngularRotationXCur, imuAngularRotationYCur, imuAngularRotationZCur;
     float imuAngularRotationXLast, imuAngularRotationYLast, imuAngularRotationZLast;
     float imuAngularFromStartX, imuAngularFromStartY, imuAngularFromStartZ;
 
+    // 记录imu队列中的时间戳
     double imuTime[imuQueLength];
     float imuRoll[imuQueLength];
     float imuPitch[imuQueLength];
@@ -123,14 +127,15 @@ private:
     float imuVeloY[imuQueLength];
     float imuVeloZ[imuQueLength];
 
+    // 记录imu位置积分
     float imuShiftX[imuQueLength];
     float imuShiftY[imuQueLength];
     float imuShiftZ[imuQueLength];
-
+    // imu角速度积分
     float imuAngularVeloX[imuQueLength];
     float imuAngularVeloY[imuQueLength];
     float imuAngularVeloZ[imuQueLength];
-
+    // imu旋转角度积分
     float imuAngularRotationX[imuQueLength];
     float imuAngularRotationY[imuQueLength];
     float imuAngularRotationZ[imuQueLength];
@@ -392,6 +397,7 @@ public:
         imuVeloFromStartZCur = imuVeloZCur - imuVeloZStart;
 
         // ！！！下面从世界坐标系转换到start坐标系，roll,pitch,yaw要取负值
+        //R(-roll)*R(-pitch)*R(-yaw)
         // 首先绕y轴进行旋转
         //    |cosry   0   sinry|
         // Ry=|0       1       0|
@@ -420,7 +426,7 @@ public:
     /**
      * @brief 该函数的功能是把点云坐标变换到初始imu时刻
      * 
-     * @param p[out] 
+     * @param p[out] 点变换到imu的start坐标系下
      */
     void TransformToStartIMU(PointType *p)
     {
@@ -524,7 +530,10 @@ public:
         accX = cos(yaw) * x2 + sin(yaw) * z2;
         accY = y2;
         accZ = -sin(yaw) * x2 + cos(yaw) * z2;
+
+        // 得到世界坐标系下的加速度
         //------------------------------旋转结束------------------------------
+        
 
         // 进行位移，速度，角度量的累加
         int imuPointerBack = (imuPointerLast + imuQueLength - 1) % imuQueLength;
@@ -582,7 +591,7 @@ public:
 
     void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     {
-
+        
         cloudHeader = laserCloudMsg->header;
 
         timeScanCur = cloudHeader.stamp.toSec();
