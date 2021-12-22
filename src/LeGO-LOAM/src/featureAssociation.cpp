@@ -50,7 +50,7 @@ private:
     ros::Publisher pubSurfPointsFlat;
     ros::Publisher pubSurfPointsLessFlat;
 
-    // 保存分割的点云
+    // 保存分割的点云，其坐标已经变换到起始时刻
     pcl::PointCloud<PointType>::Ptr segmentedCloud;
     // 保存外点点云数据
     pcl::PointCloud<PointType>::Ptr outlierCloud;
@@ -64,14 +64,17 @@ private:
     pcl::PointCloud<PointType>::Ptr surfPointsLessFlatScanDS;
 
     pcl::VoxelGrid<PointType> downSizeFilter;
-
+    // 记录当前激光的时间戳
     double timeScanCur;
     double timeNewSegmentedCloud;
+    // 记录收到新分割点云的时间错
     double timeNewSegmentedCloudInfo;
+    // 记录外点时间戳
     double timeNewOutlierCloud;
 
     bool newSegmentedCloud;
     bool newSegmentedCloudInfo;
+    // 是否收到新的异常点云
     bool newOutlierCloud;
     // 记录分割点云传过来的信息
     cloud_msgs::cloud_info segInfo;
@@ -100,6 +103,7 @@ private:
     float imuShiftXCur, imuShiftYCur, imuShiftZCur;
 
     float imuShiftFromStartXCur, imuShiftFromStartYCur, imuShiftFromStartZCur;
+    // 从起始时刻到当前的imu相对速度，在start坐标系下
     float imuVeloFromStartXCur, imuVeloFromStartYCur, imuVeloFromStartZCur;
 
     float imuAngularRotationXCur, imuAngularRotationYCur, imuAngularRotationZCur;
@@ -151,7 +155,9 @@ private:
     float pointSearchSurfInd2[N_SCAN * Horizon_SCAN];
     float pointSearchSurfInd3[N_SCAN * Horizon_SCAN];
 
+    // 雷达旋转一圈后发生的相对位姿变换
     float transformCur[6];
+    // ?
     float transformSum[6];
 
     float imuRollLast, imuPitchLast, imuYawLast;
@@ -377,11 +383,10 @@ public:
         imuShiftFromStartZCur = z2;
     }
 
+    // 得到其它点云与第一个点云点的相对速度（世界坐标系）
     void VeloToStartIMU()
     {
         // imuVeloXStart,imuVeloYStart,imuVeloZStart是点云索引i=0时刻的速度
-        // 此处计算的是相对于初始时刻i=0时的相对速度
-        // 这个相对速度在世界坐标系下
         imuVeloFromStartXCur = imuVeloXCur - imuVeloXStart;
         imuVeloFromStartYCur = imuVeloYCur - imuVeloYStart;
         imuVeloFromStartZCur = imuVeloZCur - imuVeloZStart;
@@ -412,7 +417,11 @@ public:
         imuVeloFromStartZCur = z2;
     }
 
-    // 该函数的功能是把点云坐标变换到初始imu时刻
+    /**
+     * @brief 该函数的功能是把点云坐标变换到初始imu时刻
+     * 
+     * @param p[out] 
+     */
     void TransformToStartIMU(PointType *p)
     {
         // 因为在adjustDistortion函数中有对xyz的坐标进行交换的过程
@@ -479,6 +488,7 @@ public:
         float accY = imuAccY[imuPointerLast];
         float accZ = imuAccZ[imuPointerLast];
 
+        //-------------------------------绕zxy旋转-------------------------------
         // 先绕Z轴(原x轴)旋转,下方坐标系示意imuHandler()中加速度的坐标轴交换
         //  z->Y
         //  ^
@@ -514,21 +524,22 @@ public:
         accX = cos(yaw) * x2 + sin(yaw) * z2;
         accY = y2;
         accZ = -sin(yaw) * x2 + cos(yaw) * z2;
+        //------------------------------旋转结束------------------------------
 
         // 进行位移，速度，角度量的累加
         int imuPointerBack = (imuPointerLast + imuQueLength - 1) % imuQueLength;
         double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
         if (timeDiff < scanPeriod)
         {
-
+            // 位置积分
             imuShiftX[imuPointerLast] = imuShiftX[imuPointerBack] + imuVeloX[imuPointerBack] * timeDiff + accX * timeDiff * timeDiff / 2;
             imuShiftY[imuPointerLast] = imuShiftY[imuPointerBack] + imuVeloY[imuPointerBack] * timeDiff + accY * timeDiff * timeDiff / 2;
             imuShiftZ[imuPointerLast] = imuShiftZ[imuPointerBack] + imuVeloZ[imuPointerBack] * timeDiff + accZ * timeDiff * timeDiff / 2;
-
+            // 速度积分
             imuVeloX[imuPointerLast] = imuVeloX[imuPointerBack] + accX * timeDiff;
             imuVeloY[imuPointerLast] = imuVeloY[imuPointerBack] + accY * timeDiff;
             imuVeloZ[imuPointerLast] = imuVeloZ[imuPointerBack] + accZ * timeDiff;
-
+            // 角度积分
             imuAngularRotationX[imuPointerLast] = imuAngularRotationX[imuPointerBack] + imuAngularVeloX[imuPointerBack] * timeDiff;
             imuAngularRotationY[imuPointerLast] = imuAngularRotationY[imuPointerBack] + imuAngularVeloY[imuPointerBack] * timeDiff;
             imuAngularRotationZ[imuPointerLast] = imuAngularRotationZ[imuPointerBack] + imuAngularVeloZ[imuPointerBack] * timeDiff;
@@ -544,6 +555,8 @@ public:
 
         // 加速度去除重力影响，同时坐标轴进行变换
         // 相关解释在https://blog.csdn.net/weixin_44492854/article/details/109249662
+
+        // imu坐标系下的加速度
         float accX = imuIn->linear_acceleration.y - sin(roll) * cos(pitch) * 9.81;
         float accY = imuIn->linear_acceleration.z - cos(roll) * cos(pitch) * 9.81;
         float accZ = imuIn->linear_acceleration.x + sin(pitch) * 9.81;
@@ -621,6 +634,8 @@ public:
             // ori表示的是偏航角yaw，因为前面有负号，ori=[-M_PI,M_PI)
             // 因为segInfo.orientationDiff表示的范围是(PI,3PI)，在2PI附近
             // 下面过程的主要作用是调整ori大小，满足start<ori<end
+
+            // 计算当前点的偏航角
             float ori = -atan2(point.x, point.z);
             if (!halfPassed)
             {
@@ -1028,6 +1043,12 @@ public:
         }
     }
 
+    /**
+     * @brief 
+     * 
+     * @param pi[in] 
+     * @param po[out] 
+     */
     void TransformToStart(PointType const *const pi, PointType *const po)
     {
         // intensity代表的是：整数部分ring序号，小数部分是当前点在这一圈中所花的时间
@@ -1214,6 +1235,11 @@ public:
         return degrees * M_PI / 180.0;
     }
 
+    /**
+     * @brief 寻找点到线的对应特征
+     * 
+     * @param iterCount 
+     */
     void findCorrespondingCornerFeatures(int iterCount)
     {
 
@@ -1340,6 +1366,11 @@ public:
         }
     }
 
+    /**
+     * @brief 寻找点到面的对应特征
+     * 
+     * @param iterCount 
+     */
     void findCorrespondingSurfFeatures(int iterCount)
     {
 
@@ -1498,6 +1529,13 @@ public:
         }
     }
 
+    /**
+     * @brief 过面特征的匹配，计算变换矩阵
+     * 
+     * @param iterCount 
+     * @return true 
+     * @return false 
+     */
     bool calculateTransformationSurf(int iterCount)
     {
 
@@ -1632,6 +1670,13 @@ public:
         return true;
     }
 
+    /**
+     * @brief 通过棱边的匹配，计算变换矩阵
+     * 
+     * @param iterCount 
+     * @return true 
+     * @return false 
+     */
     bool calculateTransformationCorner(int iterCount)
     {
 
@@ -1948,6 +1993,10 @@ public:
         systemInitedLM = true;
     }
 
+    /**
+     * @brief 该函数根据IMU积分的结果，计算出一个初始位姿transformCur，这个位姿指的是雷达旋转一圈后发生的相对位姿变换
+     * 
+     */
     void updateInitialGuess()
     {
 
@@ -1983,6 +2032,10 @@ public:
         }
     }
 
+    /**
+     * @brief 算两帧点云的变换矩阵，调用calculateTransformationSurf(),calculateTransformationCorner() 
+     * 
+     */
     void updateTransformation()
     {
 
@@ -2024,7 +2077,7 @@ public:
         }
     }
 
-    // 旋转角的累计变化量
+    // 把优化得到的transformCur，累加到transformSum中
     void integrateTransformation()
     {
         float rx, ry, rz, tx, ty, tz;
