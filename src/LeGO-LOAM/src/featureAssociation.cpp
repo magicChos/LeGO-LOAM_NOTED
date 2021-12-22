@@ -99,9 +99,10 @@ private:
     float cosImuRollStart, cosImuPitchStart, cosImuYawStart, sinImuRollStart, sinImuPitchStart, sinImuYawStart;
     float imuRollCur, imuPitchCur, imuYawCur;
 
+    // muVeloXStart,imuVeloYStart,imuVeloZStart是点云索引i=0时刻的速度
     float imuVeloXStart, imuVeloYStart, imuVeloZStart;
     float imuShiftXStart, imuShiftYStart, imuShiftZStart;
-
+    // 当前imu速度
     float imuVeloXCur, imuVeloYCur, imuVeloZCur;
     float imuShiftXCur, imuShiftYCur, imuShiftZCur;
 
@@ -171,7 +172,9 @@ private:
 
     pcl::PointCloud<PointType>::Ptr laserCloudCornerLast;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfLast;
+    // laserCloudOri中保存的是对应于coeffSel的未转换到开始时刻的原始点云数据
     pcl::PointCloud<PointType>::Ptr laserCloudOri;
+    // 记录平面系数
     pcl::PointCloud<PointType>::Ptr coeffSel;
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtreeCornerLast;
