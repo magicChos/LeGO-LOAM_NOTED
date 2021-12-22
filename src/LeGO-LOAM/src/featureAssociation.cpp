@@ -653,6 +653,7 @@ public:
 
             if (imuPointerLast >= 0)
             {
+                // 计算每一点相对起始点的时间
                 float pointTime = relTime * scanPeriod;
                 imuPointerFront = imuPointerLastIteration;
                 // while循环内进行时间轴对齐
@@ -768,7 +769,7 @@ public:
                 }
                 else
                 {
-                    // 速度投影到初始i=0时刻
+                    // i！=0时刻的imu速度投影到初始i=0时刻
                     VeloToStartIMU();
                     // 将点的坐标变换到初始i=0时刻
                     TransformToStartIMU(&point);
