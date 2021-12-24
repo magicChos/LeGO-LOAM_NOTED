@@ -219,6 +219,7 @@ private:
     bool potentialLoopFlag;
     double timeSaveFirstCurrentScanForLoopClosure;
     int closestHistoryFrameID;
+    
     int latestFrameIDLoopCloure;
 
     bool aLoopIsClosed;
