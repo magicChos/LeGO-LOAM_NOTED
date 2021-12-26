@@ -1,0 +1,7 @@
+<launch>
+	<!-- - TF -->
+	<node pkg="tf" type="static_transform_publisher" name="base_link1_to_camera" args="1 0 0 1.570795 0 0        /camera /b1   10" />
+	<node pkg="tf" type="static_transform_publisher" name="base_link2_to_camera" args="2 0 0 1.570795 1.570795 0        /camera /b2   10" />
+	<node pkg="tf" type="static_transform_publisher" name="base_link3_to_camera" args="3 0 0 1.570795 1.570795 1.570795        /camera /b3   10" />
+	<node pkg="tf" type="static_transform_publisher" name="base_link4_to_camera" args="4 0 0 1.570795 1.570795 -1.570795        /camera /b4   10" />
+</launch>

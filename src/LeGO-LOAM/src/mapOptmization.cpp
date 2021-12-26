@@ -50,7 +50,9 @@ class mapOptimization
 {
 
 private:
+    // 构建因子图模型
     NonlinearFactorGraph gtSAMgraph;
+    // 记录初始化值
     Values initialEstimate;
     Values optimizedEstimate;
     ISAM2 *isam;
@@ -95,6 +97,7 @@ private:
     deque<pcl::PointCloud<PointType>::Ptr> surroundingOutlierCloudKeyFrames;
 
     PointType previousRobotPosPoint;
+    // 当前机器人的位姿点
     PointType currentRobotPosPoint;
 
     // PointType(pcl::PointXYZI)的XYZI分别保存3个方向上的平移和一个索引(cloudKeyPoses3D->points.size())
@@ -107,18 +110,25 @@ private:
     pcl::PointCloud<PointType>::Ptr surroundingKeyPoses;
     pcl::PointCloud<PointType>::Ptr surroundingKeyPosesDS;
 
+    // 记录最新的角点
     pcl::PointCloud<PointType>::Ptr laserCloudCornerLast;
+    // 记录最新的平面点
     pcl::PointCloud<PointType>::Ptr laserCloudSurfLast;
+    // 记录最新的下采样角点
     pcl::PointCloud<PointType>::Ptr laserCloudCornerLastDS;
+    // 记录最新的下采样平面点
     pcl::PointCloud<PointType>::Ptr laserCloudSurfLastDS;
-
+    // 记录最新的异常点
     pcl::PointCloud<PointType>::Ptr laserCloudOutlierLast;
     pcl::PointCloud<PointType>::Ptr laserCloudOutlierLastDS;
 
     pcl::PointCloud<PointType>::Ptr laserCloudSurfTotalLast;
+    // 记录降采样之后的平面点+异常点
     pcl::PointCloud<PointType>::Ptr laserCloudSurfTotalLastDS;
 
+    // 记录边缘点？
     pcl::PointCloud<PointType>::Ptr laserCloudOri;
+    // 对应的方向向量？
     pcl::PointCloud<PointType>::Ptr coeffSel;
 
     pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMap;
@@ -158,9 +168,12 @@ private:
     pcl::VoxelGrid<PointType> downSizeFilterGlobalMapKeyPoses;
     pcl::VoxelGrid<PointType> downSizeFilterGlobalMapKeyFrames;
 
+    // 收到最新角点的时间戳
     double timeLaserCloudCornerLast;
+    // 收到最新平面点的时间戳
     double timeLaserCloudSurfLast;
     double timeLaserOdometry;
+    // 收到最新异常点时间戳
     double timeLaserCloudOutlierLast;
     double timeLastGloalMapPublish;
 
@@ -178,14 +191,17 @@ private:
     float transformIncre[6];
 
     /*************低频转换量*************/
-    // 以起始位置为原点的世界坐标系下的转换矩阵（猜测与调整的对象）
+    // 记录当前经过优化后的位姿
     float transformTobeMapped[6];
-    // 存放mapping之前的Odometry计算的世界坐标系的转换矩阵（注：低频量，不一定与transformSum一样）
+
+    // 上一时刻的里程计信息
     float transformBefMapped[6];
-    // 存放mapping之后的经过mapping微调之后的转换矩阵
+
+    // 上一时刻经过优化后的位姿
     float transformAftMapped[6];
 
     int imuPointerFront;
+    // 记录最新imu数据的索引
     int imuPointerLast;
 
     double imuTime[imuQueLength];
@@ -212,6 +228,7 @@ private:
     int laserCloudCornerFromMapDSNum;
     int laserCloudSurfFromMapDSNum;
     int laserCloudCornerLastDSNum;
+    // 记录下采样后平面点数量
     int laserCloudSurfLastDSNum;
     int laserCloudOutlierLastDSNum;
     int laserCloudSurfTotalLastDSNum;
@@ -224,6 +241,7 @@ private:
 
     bool aLoopIsClosed;
 
+    // tX,tY,tZ表示经过优化之后的位置
     float cRoll, sRoll, cPitch, sPitch, cYaw, sYaw, tX, tY, tZ;
     float ctRoll, stRoll, ctPitch, stPitch, ctYaw, stYaw, tInX, tInY, tInZ;
 
@@ -383,7 +401,7 @@ public:
         latestFrameID = 0;
     }
 
-    // 将坐标转移到世界坐标系下,得到可用于建图的Lidar坐标，即修改了transformTobeMapped的值
+    // 通过laserOdometry可以获得本帧与上一帧之间的变换关系，利用这个变换关系，给出一个待优化的初始值
     void transformAssociateToMap()
     {
         float x1 = cos(transformSum[1]) * (transformBefMapped[3] - transformSum[3]) - sin(transformSum[1]) * (transformBefMapped[5] - transformSum[5]);
@@ -644,6 +662,7 @@ public:
 
     void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laserOdometry)
     {
+        // 收到最新里程计时间戳
         timeLaserOdometry = laserOdometry->header.stamp.toSec();
         double roll, pitch, yaw;
         geometry_msgs::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
@@ -791,6 +810,12 @@ public:
         }
     }
 
+    /**
+     * @brief 检测闭环
+     * 在当前位置按照指定半径搜索，如果搜索到的点和当前odom时间差大于30秒则认为检测到回环
+     * @return true 
+     * @return false 
+     */
     bool detectLoopClosure()
     {
 
@@ -1130,6 +1155,10 @@ public:
         laserCloudSurfFromMapDSNum = laserCloudSurfFromMapDS->points.size();
     }
 
+    /**
+     * @brief 执行下采样
+     * 
+     */
     void downsampleCurrentScan()
     {
 
@@ -1393,7 +1422,7 @@ public:
         {
             return false;
         }
-
+        // 计算的雅克比矩阵
         cv::Mat matA(laserCloudSelNum, 6, CV_32F, cv::Scalar::all(0));
         cv::Mat matAt(6, laserCloudSelNum, CV_32F, cv::Scalar::all(0));
         cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
@@ -1408,11 +1437,12 @@ public:
 
             // 求雅克比矩阵中的元素，距离d对roll角度的偏导量即d(d)/d(roll)
             // 更详细的数学推导参看wykxwyc.github.io
+            // arx：距离d对roll求偏导
             float arx = (crx * sry * srz * pointOri.x + crx * crz * sry * pointOri.y - srx * sry * pointOri.z) * coeff.x + (-srx * srz * pointOri.x - crz * srx * pointOri.y - crx * pointOri.z) * coeff.y + (crx * cry * srz * pointOri.x + crx * cry * crz * pointOri.y - cry * srx * pointOri.z) * coeff.z;
 
             // 同上，求解的是对pitch的偏导量
             float ary = ((cry * srx * srz - crz * sry) * pointOri.x + (sry * srz + cry * crz * srx) * pointOri.y + crx * cry * pointOri.z) * coeff.x + ((-cry * crz - srx * sry * srz) * pointOri.x + (cry * srz - crz * srx * sry) * pointOri.y - crx * sry * pointOri.z) * coeff.z;
-
+            // 距离对yaw求偏导
             float arz = ((crz * srx * sry - cry * srz) * pointOri.x + (-cry * crz - srx * sry * srz) * pointOri.y) * coeff.x + (crx * crz * pointOri.x - crx * srz * pointOri.y) * coeff.y + ((sry * srz + cry * crz * srx) * pointOri.x + (crz * sry - cry * srx * srz) * pointOri.y) * coeff.z;
 
             /*
@@ -1555,6 +1585,7 @@ public:
         currentRobotPosPoint.z = transformAftMapped[5];
 
         bool saveThisKeyFrame = true;
+        // 如果前一帧和当前帧距离小于0.3，则不保存当前关键帧
         if (sqrt((previousRobotPosPoint.x - currentRobotPosPoint.x) * (previousRobotPosPoint.x - currentRobotPosPoint.x) + (previousRobotPosPoint.y - currentRobotPosPoint.y) * (previousRobotPosPoint.y - currentRobotPosPoint.y) + (previousRobotPosPoint.z - currentRobotPosPoint.z) * (previousRobotPosPoint.z - currentRobotPosPoint.z)) < 0.3)
         {
             saveThisKeyFrame = false;
