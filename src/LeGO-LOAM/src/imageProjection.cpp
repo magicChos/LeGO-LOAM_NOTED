@@ -27,7 +27,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "utility.h"
+#include "log.h"
 
+lego_loam::common::Log plog("lego_loam.log");
 class ImageProjection
 {
 private:
@@ -192,6 +194,8 @@ public:
         cloudSegmentation();
         publishCloud();
         resetParameters();
+
+        LogInfo("cloudHander process finished!");
     }
 
     void findStartEndAngle()
@@ -622,7 +626,7 @@ int main(int argc, char **argv)
 {
 
     ros::init(argc, argv, "lego_loam");
-
+    LogInfo("Image Projection Started.");
     ImageProjection IP;
 
     ROS_INFO("\033[1;32m---->\033[0m Image Projection Started.");

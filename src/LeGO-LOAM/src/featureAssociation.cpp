@@ -35,7 +35,6 @@
 #include "utility.h"
 #include "log.h"
 
-lego_loam::common::Log plog("featureAssociation.log");
 
 class FeatureAssociation
 {
