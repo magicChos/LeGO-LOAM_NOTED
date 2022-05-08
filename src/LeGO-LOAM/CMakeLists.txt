@@ -9,10 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   cv_bridge
   image_transport
-
   pcl_ros
   pcl_conversions
-
   std_msgs
   sensor_msgs
   geometry_msgs
@@ -45,16 +43,18 @@ link_directories(
 	${GTSAM_LIBRARY_DIRS}
 )
 
+set(UTILS_SRC ${CMAKE_CURRENT_LIST_DIR}/src/log.cpp)
+
 add_executable(imageProjection src/imageProjection.cpp)
 add_dependencies(imageProjection ${catkin_EXPORTED_TARGETS} cloud_msgs_gencpp)
 target_link_libraries(imageProjection ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
-add_executable(featureAssociation src/featureAssociation.cpp)
+add_executable(featureAssociation src/featureAssociation.cpp ${UTILS_SRC})
 add_dependencies(featureAssociation ${catkin_EXPORTED_TARGETS} cloud_msgs_gencpp)
 target_link_libraries(featureAssociation ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
-add_executable(mapOptmization src/mapOptmization.cpp)
+add_executable(mapOptmization src/mapOptmization.cpp ${UTILS_SRC})
 target_link_libraries(mapOptmization ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} gtsam)
 
-add_executable(transformFusion src/transformFusion.cpp)
+add_executable(transformFusion src/transformFusion.cpp ${UTILS_SRC})
 target_link_libraries(transformFusion ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})

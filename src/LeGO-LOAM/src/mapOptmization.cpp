@@ -1407,6 +1407,7 @@ public:
 
     // 这部分的代码是基于高斯牛顿法的优化，不是zhang ji论文中提到的基于L-M的优化方法
     // 这部分的代码使用旋转矩阵对欧拉角求导，优化欧拉角，不是zhang ji论文中提到的使用angle-axis的优化
+    // 欧拉角的旋转矩阵方式为Y1X2Z3，参照https://pic4.zhimg.com/80/v2-43b597e6749cf3019d4d0ba14297b327_720w.jpg (hanshuo add)
     bool LMOptimization(int iterCount)
     {
         float srx = sin(transformTobeMapped[0]);

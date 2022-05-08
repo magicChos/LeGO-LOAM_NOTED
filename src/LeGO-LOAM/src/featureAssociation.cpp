@@ -33,6 +33,9 @@
 //      IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). October 2018.
 
 #include "utility.h"
+#include "log.h"
+
+lego_loam::common::Log plog("featureAssociation.log");
 
 class FeatureAssociation
 {
@@ -2358,6 +2361,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "lego_loam");
 
     ROS_INFO("\033[1;32m---->\033[0m Feature Association Started.");
+    LogInfo("\033[1;32m---->\033[0m Feature Association Started.");
 
     FeatureAssociation FA;
 
