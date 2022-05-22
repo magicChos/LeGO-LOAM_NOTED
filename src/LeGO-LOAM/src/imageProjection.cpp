@@ -27,7 +27,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "utility.h"
+#include "log.h"
 
+lego_loam::common::Log plog("lego_loam.log");
 class ImageProjection
 {
 private:
@@ -61,13 +63,13 @@ private:
     cv::Mat m_rangeMat;
     cv::Mat m_labelMat;
     cv::Mat m_groundMat;
-    int labelCount;
+    int     labelCount;
 
     float startOrientation;
     float endOrientation;
 
     cloud_msgs::cloud_info m_segMsg;
-    std_msgs::Header m_cloudHeader;
+    std_msgs::Header       m_cloudHeader;
 
     std::vector<std::pair<uint8_t, uint8_t>> neighborIterator;
 
@@ -81,20 +83,21 @@ public:
     ImageProjection() : nh("~")
     {
         // 订阅来自velodyne雷达驱动的topic ("/velodyne_points")
-        subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1, &ImageProjection::cloudHandler, this);
+        subLaserCloud =
+            nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1, &ImageProjection::cloudHandler, this);
 
-        pubFullCloud = nh.advertise<sensor_msgs::PointCloud2>("/full_cloud_projected", 1);
+        pubFullCloud     = nh.advertise<sensor_msgs::PointCloud2>("/full_cloud_projected", 1);
         pubFullInfoCloud = nh.advertise<sensor_msgs::PointCloud2>("/full_cloud_info", 1);
 
-        pubGroundCloud = nh.advertise<sensor_msgs::PointCloud2>("/ground_cloud", 1);
-        pubSegmentedCloud = nh.advertise<sensor_msgs::PointCloud2>("/segmented_cloud", 1);
+        pubGroundCloud        = nh.advertise<sensor_msgs::PointCloud2>("/ground_cloud", 1);
+        pubSegmentedCloud     = nh.advertise<sensor_msgs::PointCloud2>("/segmented_cloud", 1);
         pubSegmentedCloudPure = nh.advertise<sensor_msgs::PointCloud2>("/segmented_cloud_pure", 1);
         pubSegmentedCloudInfo = nh.advertise<cloud_msgs::cloud_info>("/segmented_cloud_info", 1);
-        pubOutlierCloud = nh.advertise<sensor_msgs::PointCloud2>("/outlier_cloud", 1);
+        pubOutlierCloud       = nh.advertise<sensor_msgs::PointCloud2>("/outlier_cloud", 1);
 
-        nanPoint.x = std::numeric_limits<float>::quiet_NaN();
-        nanPoint.y = std::numeric_limits<float>::quiet_NaN();
-        nanPoint.z = std::numeric_limits<float>::quiet_NaN();
+        nanPoint.x         = std::numeric_limits<float>::quiet_NaN();
+        nanPoint.y         = std::numeric_limits<float>::quiet_NaN();
+        nanPoint.z         = std::numeric_limits<float>::quiet_NaN();
         nanPoint.intensity = -1;
 
         allocateMemory();
@@ -128,16 +131,16 @@ public:
         // labelComponents函数中用到了这个矩阵
         // 该矩阵用于求某个点的上下左右4个邻接点
         std::pair<int8_t, int8_t> neighbor;
-        neighbor.first = -1;
+        neighbor.first  = -1;
         neighbor.second = 0;
         neighborIterator.push_back(neighbor);
-        neighbor.first = 0;
+        neighbor.first  = 0;
         neighbor.second = 1;
         neighborIterator.push_back(neighbor);
-        neighbor.first = 0;
+        neighbor.first  = 0;
         neighbor.second = -1;
         neighborIterator.push_back(neighbor);
-        neighbor.first = 1;
+        neighbor.first  = 1;
         neighbor.second = 0;
         neighborIterator.push_back(neighbor);
 
@@ -157,20 +160,22 @@ public:
         m_segmentedCloudPure->clear();
         m_outlierCloud->clear();
 
-        m_rangeMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
+        m_rangeMat  = cv::Mat(N_SCAN, Horizon_SCAN, CV_32F, cv::Scalar::all(FLT_MAX));
         m_groundMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_8S, cv::Scalar::all(0));
-        m_labelMat = cv::Mat(N_SCAN, Horizon_SCAN, CV_32S, cv::Scalar::all(0));
-        labelCount = 1;
+        m_labelMat  = cv::Mat(N_SCAN, Horizon_SCAN, CV_32S, cv::Scalar::all(0));
+        labelCount  = 1;
 
         std::fill(m_fullCloud->points.begin(), m_fullCloud->points.end(), nanPoint);
         std::fill(m_fullInfoCloud->points.begin(), m_fullInfoCloud->points.end(), nanPoint);
     }
 
-    ~ImageProjection() {}
+    ~ImageProjection()
+    {
+    }
 
     /**
      * @brief 将收到的数据转为pcl格式
-     * 
+     *
      * @param laserCloudMsg[in] 收到的ros点云
      */
     void copyPointCloud(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
@@ -189,6 +194,8 @@ public:
         cloudSegmentation();
         publishCloud();
         resetParameters();
+
+        LogInfo("cloudHander process finished!");
     }
 
     void findStartEndAngle()
@@ -223,8 +230,8 @@ public:
 
     void projectPointCloud()
     {
-        float verticalAngle, horizonAngle, range;
-        size_t rowIdn, columnIdn, index, cloudSize;
+        float     verticalAngle, horizonAngle, range;
+        size_t    rowIdn, columnIdn, index, cloudSize;
         PointType thisPoint;
 
         cloudSize = m_laserCloudIn->points.size();
@@ -237,7 +244,8 @@ public:
             thisPoint.z = m_laserCloudIn->points[i].z;
 
             // 计算竖直方向上的角度（雷达的第几线）
-            verticalAngle = atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) * 180 / M_PI;
+            verticalAngle =
+                atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) * 180 / M_PI;
 
             // rowIdn计算出该点激光雷达是竖直方向上第几线的
             // 从下往上计数，-15度记为初始线，第0线，一共16线(N_SCAN=16)
@@ -287,7 +295,7 @@ public:
             // columnIdn:[0,H] (H:Horizon_SCAN)==>[0,1800]
             thisPoint.intensity = (float)rowIdn + (float)columnIdn / 10000.0;
 
-            index = columnIdn + rowIdn * Horizon_SCAN;
+            index                      = columnIdn + rowIdn * Horizon_SCAN;
             m_fullCloud->points[index] = thisPoint;
 
             m_fullInfoCloud->points[index].intensity = range;
@@ -297,7 +305,7 @@ public:
     void groundRemoval()
     {
         size_t lowerInd, upperInd;
-        float diffX, diffY, diffZ, angle;
+        float  diffX, diffY, diffZ, angle;
 
         for (size_t j = 0; j < Horizon_SCAN; ++j)
         {
@@ -310,8 +318,7 @@ public:
 
                 // 初始化的时候用nanPoint.intensity = -1 填充
                 // 都是-1 证明是空点nanPoint
-                if (m_fullCloud->points[lowerInd].intensity == -1 ||
-                    m_fullCloud->points[upperInd].intensity == -1)
+                if (m_fullCloud->points[lowerInd].intensity == -1 || m_fullCloud->points[upperInd].intensity == -1)
                 {
                     m_groundMat.at<int8_t>(i, j) = -1;
                     continue;
@@ -328,7 +335,7 @@ public:
 
                 if (abs(angle - sensorMountAngle) <= 10)
                 {
-                    m_groundMat.at<int8_t>(i, j) = 1;
+                    m_groundMat.at<int8_t>(i, j)     = 1;
                     m_groundMat.at<int8_t>(i + 1, j) = 1;
                 }
             }
@@ -412,8 +419,8 @@ public:
                     // 上面多个if语句已经去掉了不符合条件的点，这部分直接进行信息的拷贝和保存操作
                     // 保存完毕后sizeOfSegCloud递增
                     m_segMsg.segmentedCloudGroundFlag[sizeOfSegCloud] = (m_groundMat.at<int8_t>(i, j) == 1);
-                    m_segMsg.segmentedCloudColInd[sizeOfSegCloud] = j;
-                    m_segMsg.segmentedCloudRange[sizeOfSegCloud] = m_rangeMat.at<float>(i, j);
+                    m_segMsg.segmentedCloudColInd[sizeOfSegCloud]     = j;
+                    m_segMsg.segmentedCloudRange[sizeOfSegCloud]      = m_rangeMat.at<float>(i, j);
                     m_segmentedCloud->push_back(m_fullCloud->points[j + i * Horizon_SCAN]);
                     ++sizeOfSegCloud;
                 }
@@ -445,17 +452,17 @@ public:
     void labelComponents(int row, int col)
     {
         float d1, d2, alpha, angle;
-        int fromIndX, fromIndY, thisIndX, thisIndY;
-        bool lineCountFlag[N_SCAN] = {false};
+        int   fromIndX, fromIndY, thisIndX, thisIndY;
+        bool  lineCountFlag[N_SCAN] = {false};
 
-        m_queueIndX[0] = row;
-        m_queueIndY[0] = col;
-        int queueSize = 1;
+        m_queueIndX[0]    = row;
+        m_queueIndY[0]    = col;
+        int queueSize     = 1;
         int queueStartInd = 0;
-        int queueEndInd = 1;
+        int queueEndInd   = 1;
 
-        m_allPushedIndX[0] = row;
-        m_allPushedIndY[0] = col;
+        m_allPushedIndX[0]   = row;
+        m_allPushedIndY[0]   = col;
         int allPushedIndSize = 1;
 
         // 标准的BFS
@@ -494,10 +501,8 @@ public:
                 if (m_labelMat.at<int>(thisIndX, thisIndY) != 0)
                     continue;
 
-                d1 = std::max(m_rangeMat.at<float>(fromIndX, fromIndY),
-                              m_rangeMat.at<float>(thisIndX, thisIndY));
-                d2 = std::min(m_rangeMat.at<float>(fromIndX, fromIndY),
-                              m_rangeMat.at<float>(thisIndX, thisIndY));
+                d1 = std::max(m_rangeMat.at<float>(fromIndX, fromIndY), m_rangeMat.at<float>(thisIndX, thisIndY));
+                d2 = std::min(m_rangeMat.at<float>(fromIndX, fromIndY), m_rangeMat.at<float>(thisIndX, thisIndY));
 
                 // alpha代表角度分辨率，
                 // X方向上角度分辨率是segmentAlphaX(rad)
@@ -521,7 +526,7 @@ public:
                     ++queueEndInd;
 
                     m_labelMat.at<int>(thisIndX, thisIndY) = labelCount;
-                    lineCountFlag[thisIndX] = true;
+                    lineCountFlag[thisIndX]                = true;
 
                     m_allPushedIndX[allPushedIndSize] = thisIndX;
                     m_allPushedIndY[allPushedIndSize] = thisIndY;
@@ -573,20 +578,20 @@ public:
 
         // pubOutlierCloud发布界外点云
         pcl::toROSMsg(*m_outlierCloud, laserCloudTemp);
-        laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+        laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
         laserCloudTemp.header.frame_id = "base_link";
         pubOutlierCloud.publish(laserCloudTemp);
 
         // pubSegmentedCloud发布分块点云
         pcl::toROSMsg(*m_segmentedCloud, laserCloudTemp);
-        laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+        laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
         laserCloudTemp.header.frame_id = "base_link";
         pubSegmentedCloud.publish(laserCloudTemp);
 
         if (pubFullCloud.getNumSubscribers() != 0)
         {
             pcl::toROSMsg(*m_fullCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+            laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubFullCloud.publish(laserCloudTemp);
         }
@@ -594,7 +599,7 @@ public:
         if (pubGroundCloud.getNumSubscribers() != 0)
         {
             pcl::toROSMsg(*m_groundCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+            laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubGroundCloud.publish(laserCloudTemp);
         }
@@ -602,7 +607,7 @@ public:
         if (pubSegmentedCloudPure.getNumSubscribers() != 0)
         {
             pcl::toROSMsg(*m_segmentedCloudPure, laserCloudTemp);
-            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+            laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubSegmentedCloudPure.publish(laserCloudTemp);
         }
@@ -610,7 +615,7 @@ public:
         if (pubFullInfoCloud.getNumSubscribers() != 0)
         {
             pcl::toROSMsg(*m_fullInfoCloud, laserCloudTemp);
-            laserCloudTemp.header.stamp = m_cloudHeader.stamp;
+            laserCloudTemp.header.stamp    = m_cloudHeader.stamp;
             laserCloudTemp.header.frame_id = "base_link";
             pubFullInfoCloud.publish(laserCloudTemp);
         }
@@ -621,7 +626,7 @@ int main(int argc, char **argv)
 {
 
     ros::init(argc, argv, "lego_loam");
-
+    LogInfo("Image Projection Started.");
     ImageProjection IP;
 
     ROS_INFO("\033[1;32m---->\033[0m Image Projection Started.");
